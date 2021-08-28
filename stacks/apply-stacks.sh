@@ -1,12 +1,11 @@
 #!/bin/bash
 
-pwd=$PWD
 stack_name="Tweeter"
 
 export BUILD_DIR=build
 export CLOUD_ID="goudham"
 
-template_path="C:/Users/sgoud/JavaProjects/Tweeter/stacks"/${BUILD_DIR}/${stack_name}.json
+template_path=${BUILD_DIR}/${stack_name}.json
 change_set_name=${CLOUD_ID}-$(date -u "+%Y-%m-%dT%H-%M-%SZ")
 
 change_set_params="--change-set-name $change_set_name"
