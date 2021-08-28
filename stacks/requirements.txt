@@ -1,0 +1,4 @@
+troposphere==3.0.2
+awacs==2.0.0
+ydiff
+pycodestyle==2.7.0
