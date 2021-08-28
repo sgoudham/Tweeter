@@ -20,5 +20,5 @@ venv:
 	. ${VENV_NAME}/Scripts/activate
 	echo "virtualenv prepared, please run 'source ${VENV_NAME}/bin/activate' if you wish to use it in your current shell"
 
-pycodestyle: venv
-	. ${VENV_NAME}/Scripts/activate && pycodestyle --first src/template.py
+pycodestyle:
+	. ${VENV_NAME}/Scripts/activate && mypy --warn-unused-configs --disallow-any-generics --disallow-subclassing-any --disallow-untyped-calls --disallow-untyped-defs --disallow-incomplete-defs --check-untyped-defs --disallow-untyped-decorators --no-implicit-optional --warn-redundant-casts --warn-unused-ignores --warn-return-any --no-implicit-reexport --strict-equality --ignore-missing-imports --pretty src/*.py && pycodestyle --first src/*.py
