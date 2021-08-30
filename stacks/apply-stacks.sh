@@ -74,9 +74,9 @@ else
         echo "${template_diff}"
     fi
 
-    echo "Are you happy with your changes? (yes/no)"
+    echo "Are you happy with your changes? Type 'yes' to continue"
     read -r input
-    if [ "$input" == "no" ]; then
+    if [ "$input" != "yes" ]; then
         echo "Exiting..."
         exit 1
     fi
