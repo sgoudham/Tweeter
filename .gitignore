@@ -29,3 +29,4 @@ stacks.iml
 /api-lambda/.env
 /api-lambda/api-lambda.iml
 /api-lambda/venv/
+/api-lambda/src/.env
