@@ -3,7 +3,7 @@ from troposphere import Template, GetAtt, Ref, Join, Output, iam, awslambda
 from troposphere.apigateway import RestApi, Resource, Method, Integration, IntegrationResponse, MethodResponse, \
     Deployment, Stage
 from troposphere.awslambda import Function, Code
-from troposphere.s3 import Bucket
+from troposphere.s3 import Bucket, VersioningConfiguration
 from troposphere.sns import Topic, Subscription
 from troposphere.sqs import Queue
 
@@ -14,6 +14,9 @@ REST_API_NAME: str = "TweeterAPI"
 REST_API_STAGE_NAME: str = "v1"
 API_LAMBDA_NAME: str = "ApiLambda"
 API_LAMBDA_KEBAB_NAME: str = "api-lambda"
+
+UPDATE_LAMBDA_NAME = "UpdateLambda"
+UPDATE_LAMBDA_KEBAB_NAME = "update-lambda"
 SHARED_CONFIG_BUCKET_NAME: str = "SharedConfig"
 
 S3_QUEUE_NAME: str = "S3Queue"
@@ -24,8 +27,86 @@ FANOUT_TOPIC_NAME: str = "FanoutTopic"
 template: Template = Template(PROJECT_NAME + "Workflow")
 templateUtil: Util = Util(template)
 
-shared_config_bucket: Bucket = template.add_resource(Bucket(SHARED_CONFIG_BUCKET_NAME))
+shared_config_bucket: Bucket = template.add_resource(
+    Bucket(
+        SHARED_CONFIG_BUCKET_NAME,
+        VersioningConfiguration=VersioningConfiguration(
+            Status="Enabled",
+        ),
+    ))
 rest_api: RestApi = template.add_resource(RestApi(REST_API_NAME, Name=REST_API_NAME))
+
+update_lambda_execute_statements = [
+    Statement(
+        Action=[
+            Action("logs", "*"),
+            Action("cloudwatch", "*"),
+            Action("cloudformation", "DescribeStacks"),
+            Action("cloudformation", "DescribeStackEvents"),
+            Action("cloudformation", "DescribeStackResource"),
+            Action("cloudformation", "DescribeStackResources"),
+            Action("cloudformation", "GetTemplate"),
+            Action("cloudformation", "List*"),
+        ],
+        Effect="Allow",
+        Resource=["*"]
+    ),
+    Statement(
+        Action=[
+            Action("s3", "Get*"),
+            Action("s3", "List*")
+        ],
+        Effect="Allow",
+        Resource=[Join("", [GetAtt(shared_config_bucket, "Arn"), "*"])]
+    )
+]
+
+update_lambda_execute_role: iam.Role = template.add_resource(
+    iam.Role(
+        UPDATE_LAMBDA_NAME + "ExecuteRole",
+        AssumeRolePolicyDocument=Policy(
+            Statement=[
+                Statement(
+                    Effect="Allow",
+                    Action=[Action("sts", "AssumeRole")],
+                    Principal=Principal("Service", ["lambda.amazonaws.com"])
+                )
+            ]
+        ),
+        Policies=[
+            iam.Policy(
+                PolicyName=UPDATE_LAMBDA_NAME + "ExecutePolicy",
+                PolicyDocument=Policy(Statement=update_lambda_execute_statements)
+            )
+        ]
+    )
+)
+
+update_lambda_code: Code = Code(
+    S3Bucket=Ref(shared_config_bucket),
+    S3Key=Join("", [UPDATE_LAMBDA_KEBAB_NAME, "/code/", UPDATE_LAMBDA_KEBAB_NAME, "-", "1", ".zip"])
+)
+
+update_lambda: Function = template.add_resource(
+    Function(
+        UPDATE_LAMBDA_NAME + "Function",
+        Code=update_lambda_code,
+        Description=UPDATE_LAMBDA_NAME + " Function",
+        Handler="request_handler.event_handler",
+        Role=GetAtt(UPDATE_LAMBDA_NAME + "ExecuteRole", "Arn"),
+        Runtime="python3.9",
+        Timeout=300,
+        MemorySize=1024
+    )
+)
+
+update_lambda_invoke_permission = template.add_resource(awslambda.Permission(
+    "UpdateLambdaPermissionForS3",
+    Action="lambda:InvokeFunction",
+    FunctionName=Ref(update_lambda),
+    Principal="s3.amazonaws.com",
+    SourceArn=Join("", ["arn:aws:s3:", Ref("AWS::Region"), ":", Ref("AWS::AccountId"), ":", Ref(shared_config_bucket)])
+))
 
 api_lambda_execute_statements = [
     Statement(
@@ -92,7 +173,7 @@ api_lambda: Function = template.add_resource(
 )
 
 api_lambda_invoke_permission = template.add_resource(awslambda.Permission(
-    "APILambdaPermission",
+    "APILambdaPermissionForAPIGateway",
     Action="lambda:InvokeFunction",
     FunctionName=Ref(api_lambda),
     Principal="apigateway.amazonaws.com",
