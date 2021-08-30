@@ -25,3 +25,7 @@ hs_err_pid*
 .idea
 stacks/stacks-venv
 stacks/build
+stacks.iml
+/api-lambda/.env
+/api-lambda/api-lambda.iml
+/api-lambda/venv/
