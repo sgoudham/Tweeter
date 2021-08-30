@@ -1,5 +1,6 @@
-from troposphere import Template
-from troposphere.sqs import Queue
+from troposphere import Template, Ref, GetAtt
+from troposphere.sns import Topic
+from troposphere.sqs import Queue, QueuePolicy
 
 
 class Util:
@@ -15,3 +16,27 @@ class Util:
                 ReceiveMessageWaitTimeSeconds=20,
             )
         )
+
+    def add_queue_policy_for_write_to_topic(self, queue: Queue, queue_policy_name: str, sid: str, fanout_topic: Topic) -> None:
+        self.template.add_resource(QueuePolicy(
+            queue_policy_name,
+            Queues=[Ref(queue)],
+            PolicyDocument={
+                "Version": "2008-10-17",
+                "Id": "PublicationPolicy",
+                "Statement": [
+                    {
+                        "Sid": sid,
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "*"
+                        },
+                        "Action": ["sqs:SendMessage"],
+                        "Resource": GetAtt(queue, "Arn"),
+                        "Condition": {
+                            "ArnEquals": {"aws:SourceArn": Ref(fanout_topic)}
+                        }
+                    }
+                ]
+            }
+        ))
