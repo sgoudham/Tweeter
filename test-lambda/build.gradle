@@ -21,13 +21,18 @@ micronaut {
 
 dependencies {
     implementation("io.micronaut:micronaut-runtime")
-    implementation("io.micronaut.xml:micronaut-jackson-xml")
     implementation("javax.annotation:javax.annotation-api")
-    runtimeOnly("ch.qos.logback:logback-classic")
+    implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.58')
+    implementation('com.amazonaws:aws-java-sdk-s3')
+    implementation("io.micronaut.aws:micronaut-aws-sdk-v2:3.0.0") {
+        force = true
+    }
 
     implementation("io.micronaut.aws:micronaut-function-aws")
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.12.5')
     implementation("com.amazonaws:aws-lambda-java-core:1.2.1")
     implementation("com.amazonaws:aws-lambda-java-events:3.9.0")
+    runtimeOnly("ch.qos.logback:logback-classic")
 }
 
 
