@@ -1,6 +1,0 @@
-applicationType: function
-defaultPackage: com.example
-testFramework: junit
-sourceLanguage: java
-buildTool: gradle
-features: [ annotation-api, app-name, aws-lambda, gradle, jackson-xml, java, junit, logback, readme, shade, yaml ]
