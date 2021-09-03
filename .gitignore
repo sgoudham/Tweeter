@@ -31,3 +31,4 @@ stacks.iml
 /api-lambda/venv/
 /api-lambda/src/.env
 /update_lambda/src/.env
+/update_lambda/venv/
