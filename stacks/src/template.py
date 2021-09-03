@@ -3,7 +3,7 @@ from troposphere import Template, GetAtt, Ref, Join, Output, iam, awslambda
 from troposphere.apigateway import RestApi, Resource, Method, Integration, IntegrationResponse, MethodResponse, \
     Deployment, Stage
 from troposphere.awslambda import Function, Code
-from troposphere.s3 import Bucket, VersioningConfiguration
+from troposphere.s3 import Bucket, VersioningConfiguration, NotificationConfiguration, LambdaConfigurations
 from troposphere.sns import Topic, Subscription
 from troposphere.sqs import Queue
 
@@ -33,6 +33,14 @@ shared_config_bucket: Bucket = template.add_resource(
         VersioningConfiguration=VersioningConfiguration(
             Status="Enabled",
         ),
+        NotificationConfiguration=NotificationConfiguration(
+            LambdaConfigurations=[
+                LambdaConfigurations(
+                    Event="s3:ObjectCreated:*",
+                    Function="arn:aws:lambda:eu-west-1:926756422720:function:Tweeter-UpdateLambdaFunction-G4lGhKJtrx7v"
+                )
+            ]
+        )
     ))
 rest_api: RestApi = template.add_resource(RestApi(REST_API_NAME, Name=REST_API_NAME))
 
@@ -105,7 +113,7 @@ update_lambda_invoke_permission = template.add_resource(awslambda.Permission(
     Action="lambda:InvokeFunction",
     FunctionName=Ref(update_lambda),
     Principal="s3.amazonaws.com",
-    SourceArn=Join("", ["arn:aws:s3:", Ref("AWS::Region"), ":", Ref("AWS::AccountId"), ":", Ref(shared_config_bucket)])
+    SourceArn=Join("", ["arn:aws:s3:::", Ref(shared_config_bucket)])
 ))
 
 api_lambda_execute_statements = [
@@ -131,7 +139,6 @@ api_lambda_execute_statements = [
         Resource=[Ref(FANOUT_TOPIC_NAME)]
     ),
 ]
-
 
 api_lambda_execute_role: iam.Role = template.add_resource(
     iam.Role(
@@ -177,7 +184,8 @@ api_lambda_invoke_permission = template.add_resource(awslambda.Permission(
     Action="lambda:InvokeFunction",
     FunctionName=Ref(api_lambda),
     Principal="apigateway.amazonaws.com",
-    SourceArn=Join("", ["arn:aws:execute-api:", Ref("AWS::Region"), ":", Ref("AWS::AccountId"), ":", Ref(rest_api), "/*/*/*"])
+    SourceArn=Join("", ["arn:aws:execute-api:", Ref("AWS::Region"), ":", Ref("AWS::AccountId"), ":", Ref(rest_api),
+                        "/*/*/*"])
 ))
 
 rest_api_resource: Resource = template.add_resource(
